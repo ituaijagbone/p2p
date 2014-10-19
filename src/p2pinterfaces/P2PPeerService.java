@@ -2,6 +2,7 @@ package p2pinterfaces;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.util.ArrayList;
 
 /**
  * This is the RMI interface it has defined 1 interface that the peer client uses to
@@ -17,5 +18,13 @@ public interface P2PPeerService extends Remote {
      */
     public byte[] downloadFile(String fileName) throws RemoteException;
 
+    /**
+     * Returns an array list containing concatenation of peerId and port number of peers that have the requested file
+     * @param portIds an array list holding all visited peers in search for file so far
+     * @param fileName file name
+     * @param ttl time to live of the request
+     * @return ArrayList containing concatenation of peer id and port number
+     */
+    public ArrayList<Integer> query(ArrayList<Integer> portIds, String fileName, int ttl);
 
 }

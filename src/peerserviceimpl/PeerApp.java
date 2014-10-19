@@ -152,6 +152,10 @@ class PeerToPeerServer {
         }
         return fileData;
     }
+
+    public ArrayList<Integer> query(ArrayList<Integer> portIds, String fileName, int ttl) {
+        return null;
+    }
 }
 
 /**
