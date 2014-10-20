@@ -52,7 +52,9 @@ public class PeerServiceImpl implements P2PPeerService{
     public ArrayList<Integer> query(ArrayList<Integer> portIds, String fileName, int ttl) {
         portIds.add(peer.getPortNumber());
         ArrayList<Integer> result = new ArrayList<Integer>();
-
+        if (ttl <= 0)
+            return result;
+        ttl = ttl - 1;
         for (int i: neighbourPorts) {
             try {
                 if (!portIds.contains(new Integer(i))) {
@@ -80,8 +82,8 @@ public class PeerServiceImpl implements P2PPeerService{
             }
         }
         Integer tmp = search(fileName);
-        if (tmp != null && !result.contains(peer.getPortNumber()))
-            result.add(peer.getPortNumber());
+        if (tmp != null && !result.contains(tmp))
+            result.add(tmp);
         return result;
     }
 
@@ -96,6 +98,11 @@ public class PeerServiceImpl implements P2PPeerService{
         peer = new PeerObject(fileNames, id, portNumber);
     }
 
+    /**
+     * Search the peer object through its array of file names if the file name is present
+     * @param fileName file name
+     * @return port number of the peer if file exist or null
+     */
     public Integer search(String fileName) {
         Integer result = null;
         if (peer.searchFiles(fileName))
