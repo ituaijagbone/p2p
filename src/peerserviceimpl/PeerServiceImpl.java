@@ -11,6 +11,7 @@ import java.net.MalformedURLException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
 /**
@@ -21,7 +22,7 @@ public class PeerServiceImpl implements P2PPeerService{
     HashMap<String, PeerObject> peers = new HashMap<String, PeerObject>();
     HashMap<Integer, Integer> portToPeer = new HashMap<Integer, Integer>();
     PeerObject peer = null;
-    int neighbourPorts[] = null;
+    String neighbourPorts[] = null;
     private PeerToPeerServer ppServer;
 
     public PeerServiceImpl(String fileDir) {
@@ -49,20 +50,21 @@ public class PeerServiceImpl implements P2PPeerService{
     }
 
     @Override
-    public ArrayList<Integer> query(ArrayList<Integer> portIds, String fileName, int ttl) {
-        portIds.add(peer.getPortNumber());
-        ArrayList<Integer> result = new ArrayList<Integer>();
+    public ArrayList<String> query(ArrayList<String> portIds, String fileName, int ttl) {
+        portIds.add(peer.getIpAddress()+":"+peer.getPortNumber());
+        ArrayList<String> result = new ArrayList<String>();
         if (ttl <= 0)
             return result;
         ttl = ttl - 1;
-        for (int i: neighbourPorts) {
+        for (String i: neighbourPorts) {
             try {
-                if (!portIds.contains(new Integer(i))) {
-                    ppServer = new PeerToPeerServer("" + i, i);
-                    ArrayList<Integer> tmp = ppServer.query(portIds, fileName, ttl);
+                String ipPort[] = i.split(" ");
+                if (!portIds.contains(ipPort[0]+":"+ipPort[1])) {
+                    ppServer = new PeerToPeerServer(ipPort[1], ipPort[0], Integer.parseInt(ipPort[1]));
+                    ArrayList<String> tmp = ppServer.query(portIds, fileName, ttl);
                     if (tmp != null) {
                         for (int j = 0; j < tmp.size(); j++) {
-                            Integer tmpPort = tmp.get(i);
+                            String tmpPort = tmp.get(j);
                             if (!result.contains(tmpPort)) {
                                 result.add(tmpPort);
                             }
@@ -70,21 +72,21 @@ public class PeerServiceImpl implements P2PPeerService{
                     }
 //                    result.addAll(ppServer.query(portIds, fileName, ttl));
                 }
-            }catch (MalformedURLException murle) {
+            }catch (Exception e) {
                 System.out.println("MalformedURLException - Wrong url cannot reach peer");
-                continue;
-            } catch (RemoteException re) {
-                System.out.println("RemoteException - Cannot reach peer. ");
-                continue;
-            } catch (NotBoundException nbe) {
-                System.out.println("NotBoundException - Cannot reach peer. ");
                 continue;
             }
         }
-        Integer tmp = search(fileName);
-        if (tmp != null && !result.contains(tmp))
-            result.add(tmp);
+        String strTmp = search(fileName);
+        if (strTmp != null && !result.contains(strTmp))
+            result.add(strTmp);
         return result;
+    }
+
+    @Override
+    public synchronized void updateFiles(String[] fileNames) throws RemoteException {
+        peer.setFileNames(fileNames);
+        System.err.println("File update on Peer Id: " + peer.getPeerId() + ": " + Arrays.toString(fileNames));
     }
 
     /**
@@ -92,10 +94,13 @@ public class PeerServiceImpl implements P2PPeerService{
      * @param peerId peer id
      * @param fileNames array contain files in peer's directory
      * @param portNumber port  number
+     * @param neighbourPorts port numbers of peer's neighbor
+     * @param ipAddress ip address that peer is running on default is localhost
      */
-    public void register(String peerId, String[] fileNames, int portNumber) {
+    public void register(String peerId, String[] fileNames, int portNumber, String[] neighbourPorts, String ipAddress) {
         String id = peerId;
-        peer = new PeerObject(fileNames, id, portNumber);
+        peer = new PeerObject(fileNames, id, portNumber, ipAddress);
+        this.neighbourPorts = neighbourPorts;
     }
 
     /**
@@ -103,10 +108,10 @@ public class PeerServiceImpl implements P2PPeerService{
      * @param fileName file name
      * @return port number of the peer if file exist or null
      */
-    public Integer search(String fileName) {
-        Integer result = null;
+    public String search(String fileName) {
+        String result = null;
         if (peer.searchFiles(fileName))
-            result = peer.getPortNumber();
+            result = peer.getIpAddress()+":"+peer.getPortNumber();
         return result;
     }
 }

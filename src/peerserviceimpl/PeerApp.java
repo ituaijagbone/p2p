@@ -6,7 +6,6 @@ import p2pinterfaces.P2PServerService;
 import java.io.*;
 import java.net.MalformedURLException;
 import java.rmi.NotBoundException;
-import java.rmi.RMISecurityManager;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -14,6 +13,8 @@ import java.rmi.server.ExportException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Scanner;
+import java.util.UUID;
 
 /**Creat the rmi server connection for a peer
  * Created by ituaijagbone on 9/26/14.
@@ -125,9 +126,11 @@ class PeerToPeerServer {
     private P2PPeerService peerService;
     String rmiName = "";
     int serverPort = 1097;
-    PeerToPeerServer(String peerId, int serverPort) throws RemoteException, MalformedURLException, NotBoundException{
+    String ipAddress = "localhost";
+    PeerToPeerServer(String peerId, String ipAddress, int serverPort) {
         this.rmiName = peerId;
         this.serverPort = serverPort;
+        this.ipAddress = ipAddress;
 //        if (System.getSecurityManager() == null) {
 //            System.setSecurityManager(new SecurityManager());
 //        }
@@ -138,10 +141,21 @@ class PeerToPeerServer {
 //            System.err.println(e.getMessage());
 //            e.printStackTrace();
 //        }
-        Registry registry = LocateRegistry.getRegistry(this.serverPort);
-        peerService = (P2PPeerService)registry.lookup(rmiName);
+        try {
+            Registry registry = LocateRegistry.getRegistry(this.ipAddress, this.serverPort);
+            peerService = (P2PPeerService)registry.lookup(rmiName);
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+            e.printStackTrace();
+        }
+
     }
 
+    /**
+     * Download file from peer
+     * @param fileName file name
+     * @return returns file in array of bytes
+     */
     public byte[] downloadFile(String fileName) {
         byte[] fileData = null;
         try {
@@ -153,8 +167,33 @@ class PeerToPeerServer {
         return fileData;
     }
 
-    public ArrayList<Integer> query(ArrayList<Integer> portIds, String fileName, int ttl) {
-        return null;
+    /**
+     * Query peer for file and send broadcast to its neighbours
+     * @param portIds array of ports already visited
+     * @param fileName file name
+     * @param ttl time to live for the broadcast
+     * @return array list containing port numbers that peer can connect to download file if found
+     */
+    public ArrayList<String> query(ArrayList<String> portIds, String fileName, int ttl) {
+        ArrayList<String> result = new ArrayList<String>();
+        try {
+            result = peerService.query(portIds, fileName, ttl);
+        } catch (RemoteException re) {
+            System.out.println("RemoteException - Cannot reach peer. ");
+        }
+        return result;
+    }
+
+    /**
+     * Update file names in peer's directory incase there is a change
+     * @param fileNames file name
+     */
+    public void updateFiles(String[] fileNames) {
+        try {
+            peerService.updateFiles(fileNames);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
 
@@ -164,27 +203,26 @@ class PeerToPeerServer {
 class PeerCommandLine implements Runnable {
     private Thread t;
     private String threadName;
-    private PeerToIndexServer piServer;
     private PeerToPeerServer ppServer;
     private String peerId;
     private String fileDir;
     private boolean isExperiment = false;
     private ArrayList<String> names = null;
     PeerCommandLine(String threadName,
-                    PeerToIndexServer piServer,
+                    PeerToPeerServer ppServer,
                     String peerId,
                     String fileDir) {
         this.threadName = threadName;
-        this.piServer = piServer;
+        this.ppServer = ppServer;
         this.peerId = peerId;
         this.fileDir = fileDir;
     }
     PeerCommandLine(String threadName,
-                    PeerToIndexServer piServer,
+                    PeerToPeerServer ppServer,
                     String peerId,
                     String fileDir, boolean isExperiment, ArrayList<String> names) {
         this.threadName = threadName;
-        this.piServer = piServer;
+        this.ppServer = ppServer;
         this.peerId = peerId;
         this.fileDir = fileDir;
         this.isExperiment = isExperiment;
@@ -199,6 +237,11 @@ class PeerCommandLine implements Runnable {
 
     }
 
+    /**
+     * Save file downloaded to directory
+     * @param fileData file data gotten from peer in bytes
+     * @param fileName file name
+     */
     private void saveFileToDir(byte[] fileData, String fileName) {
         try {
             File dir = new File(fileDir);
@@ -214,6 +257,9 @@ class PeerCommandLine implements Runnable {
         }
     }
 
+    /**
+     * User related commandline line interaction
+     */
     private void userRelated() {
         BufferedReader input;
         try {
@@ -233,24 +279,17 @@ class PeerCommandLine implements Runnable {
                     case 1:
                         System.out.print("Enter file name: ");
                         String fileName = input.readLine();
-                        ArrayList<String> result = null;
-                        ArrayList<Double> estimatedTimes = new ArrayList<Double>();
-                        //
+                        ArrayList<String> result;
                         long startTime = System.nanoTime();
-                        for (int i = 0; i < 1000; i++) {
-                            long startTimeInner = System.nanoTime();
-                            result = piServer.searchFile(fileName, peerId);
-                            estimatedTimes.add((double)(System.nanoTime() - startTimeInner)/1000000000.0);
-                        }
+                        result = ppServer.query(new ArrayList<String>(), fileName, 4);
                         double estimatedTime = (double)(System.nanoTime() - startTime)/1000000000.0;
                         System.out.println("Search time took: " + estimatedTime);
-//                            System.out.println("Search time took: " + estimatedTimes+ " 1 time");
                         if (result.size() > 0) {
                             System.out.println("Peer(s) were found containing file: " + fileName);
                             for (int i = 0; i < result.size(); i++) {
                                 System.out.println((i + 1) +" - Peer " + (i + 1));
                             }
-                            String choicePeer = "";
+                            String choicePeer;
                             if (result.size() > 1) {
                                 System.out.print("Select Peer: ");
                                 line = input.readLine();
@@ -266,19 +305,12 @@ class PeerCommandLine implements Runnable {
                             } else {
                                 choicePeer = result.get(0);
                             }
-                            String parts[] = choicePeer.split("\\s+");
+                            String parts[] = choicePeer.split(":");
                             try {
-                                ppServer = new PeerToPeerServer(parts[0], Integer.parseInt(parts[1]));
+                                ppServer = new PeerToPeerServer(parts[1], parts[0], Integer.parseInt(parts[1]));
                                 saveFileToDir(ppServer.downloadFile(fileName), fileName);
-                            } catch (MalformedURLException murle) {
-                                System.out.println("MalformedURLException - Wrong url cannot reach peer");
-                                piServer.notFound(parts[0]);
-                            } catch (RemoteException re) {
-                                System.out.println("RemoteException - Cannot reach peer. ");
-                                piServer.notFound(parts[0]);
-                            } catch (NotBoundException nbe) {
-                                System.out.println("NotBoundException - Cannot reach peer. ");
-                                piServer.notFound(parts[0]);
+                            } catch (Exception e) {
+                                System.out.println("Exception - Cannot reach peer");
                             }
 
 
@@ -303,6 +335,9 @@ class PeerCommandLine implements Runnable {
         }
     }
 
+    /**
+     * Experiment/evaluation related
+     */
     private void experimentRelated() {
         BufferedReader input;
         try {
@@ -329,7 +364,7 @@ class PeerCommandLine implements Runnable {
                             long startTime = System.nanoTime();
                             for (int i = 0; i < 1000; i++) {
                                 long startTimeInner = System.nanoTime();
-                                piServer.searchFile(fileName, peerId);
+                                ppServer.query(new ArrayList<String>(), fileName, 4);
                                 totalTime += (double)(System.nanoTime() - startTimeInner)/1000000000.0;
                             }
                             double estimatedTime = (double)(System.nanoTime() - startTime)/1000000000.0;
@@ -394,19 +429,22 @@ class PeerCommandLine implements Runnable {
     }
 }
 
+/**
+ * Update array that holds peer file names when change is made to directory
+ */
 class UpdatePeerFiles implements Runnable {
     String[] currentFileNames;
     PeerClient peerClient;
-    PeerToIndexServer piServer;
+    PeerToPeerServer ppServer;
     String peerId;
 
     UpdatePeerFiles(PeerClient peerClient,
-                    PeerToIndexServer piServer,
+                    PeerToPeerServer ppServer,
                     String[] currentFileNames,
                     String peerId) {
         this.currentFileNames = currentFileNames;
         this.peerClient = peerClient;
-        this.piServer = piServer;
+        this.ppServer = ppServer;
         this.peerId = peerId;
     }
 
@@ -417,7 +455,7 @@ class UpdatePeerFiles implements Runnable {
                 Thread.sleep(3000);
                 String[] tmpFiles = peerClient.getFilesInDir();
                 if (!Arrays.equals(currentFileNames, tmpFiles)) {
-                    piServer.updateFiles(tmpFiles, peerId);
+                    ppServer.updateFiles(tmpFiles);
                     currentFileNames = tmpFiles;
                 }
             }
@@ -436,7 +474,7 @@ public class PeerApp {
         int thisServerPort = 1033;
         ArrayList<String> experimentInput = new ArrayList<String>();
         boolean isExperiment = false;
-
+        String[] neighbors = null;
         try {
             if (args[0].equals("-p")) {
                 try {
@@ -477,10 +515,40 @@ public class PeerApp {
         }
 
         try {
-            if (args[4].equals("-e")) {
+            if (args[4].equals("-c")) {
                 try {
                     File file = new File(args[5]);
                     System.out.println(args[5]);
+                    ArrayList<String> tmpN = new ArrayList<String>();
+                    if (file.isFile() && file.canRead()) {
+                        try {
+                            Scanner in = new Scanner(file);
+                            while (in.hasNextLine()) {
+                                tmpN.add(in.nextLine());
+                            }
+                        } catch (IOException io) {
+                            System.err.println("Can't open file");
+                            System.exit(1);
+                        }
+                        neighbors = tmpN.toArray(new String[tmpN.size()]);
+                    } else {
+                        System.err.println("Can't open file");
+                        System.exit(1);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Can't open file, argument must be specified");
+                    System.exit(1);
+                }
+            }
+        } catch (Exception e) {
+
+        }
+
+        try {
+            if (args[6].equals("-e")) {
+                try {
+                    File file = new File(args[7]);
+                    System.out.println(args[7]);
                     if (file.isFile() && file.canRead()) {
                         try {
                             FileReader fileR = new FileReader(file);
@@ -497,7 +565,7 @@ public class PeerApp {
                             System.exit(1);
                         }
                     } else {
-                        System.err.println("Can't open file dvsdvcds");
+                        System.err.println("Can't open file");
                         System.exit(1);
                     }
                 } catch (Exception e) {
@@ -509,23 +577,23 @@ public class PeerApp {
 
         }
 
-
-
-        PeerToIndexServer peerToIndexServer = new PeerToIndexServer();
-
         PeerClient peerClient = new PeerClient(fileDir);
         String[] fileNames = peerClient.getFilesInDir();
         System.out.println(Arrays.toString(fileNames));
-        String peerId = peerToIndexServer.start(fileNames, thisServerPort);
-        System.out.println("Welcome, you have successfully registered as a peer ");
+        String peerId = UUID.randomUUID().toString();
+        //System.out.println("Welcome, you have successfully registered as a peer ");
+
+        // read in neighbors
 
         PeerServiceImpl peerService = new PeerServiceImpl(fileDir);
-        PeerServer peerServer = new PeerServer(peerService, peerId, thisServerPort);
+        peerService.register(peerId, fileNames, thisServerPort, neighbors, "localhost");
+        PeerServer peerServer = new PeerServer(peerService, "" + thisServerPort, thisServerPort);
         peerServer.run();
+        PeerToPeerServer ppServer = new PeerToPeerServer("" + thisServerPort, "localhost", thisServerPort);
 
         if (isExperiment) {
             PeerCommandLine peerCommandLine = new PeerCommandLine("Peer number " + peerId,
-                    peerToIndexServer,
+                    ppServer,
                     peerId,
                     fileDir,
                     isExperiment,
@@ -535,7 +603,7 @@ public class PeerApp {
             t.start();
         } else {
             PeerCommandLine peerCommandLine = new PeerCommandLine("Peer number " + peerId,
-                    peerToIndexServer,
+                    ppServer,
                     peerId,
                     fileDir
             );
@@ -543,7 +611,7 @@ public class PeerApp {
             t.start();
 
             UpdatePeerFiles updatePeerFiles = new UpdatePeerFiles(peerClient,
-                    peerToIndexServer, fileNames, peerId);
+                    ppServer, fileNames, peerId);
             Thread t2 = new Thread(updatePeerFiles);
             t2.start();
         }

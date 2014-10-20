@@ -9,15 +9,17 @@ public class PeerObject {
     int portNumber;
     String[] fileNames;
     String peerId;
+    String ipAddress;
 
     public PeerObject() {
 
     }
 
-    public PeerObject(String[] fileNames, String peerId, int portNumber) {
+    public PeerObject(String[] fileNames, String peerId, int portNumber, String ipAddress) {
         this.fileNames = fileNames;
         this.peerId = peerId;
         this.portNumber = portNumber;
+        this.ipAddress = ipAddress;
     }
 
     public void setPortNumber(int portNumber) {
@@ -44,6 +46,9 @@ public class PeerObject {
         return peerId;
     }
 
+    public String getIpAddress() {
+        return ipAddress;
+    }
     public boolean searchFiles(String searchValue) {
         Arrays.sort(getFileNames());
         boolean found = false;

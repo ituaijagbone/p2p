@@ -25,6 +25,13 @@ public interface P2PPeerService extends Remote {
      * @param ttl time to live of the request
      * @return ArrayList containing concatenation of peer id and port number
      */
-    public ArrayList<Integer> query(ArrayList<Integer> portIds, String fileName, int ttl);
+    public ArrayList<String> query(ArrayList<String> portIds, String fileName, int ttl) throws RemoteException;
+
+    /**
+     * Update file names in directory if there is any  change
+     * @param fileNames file name
+     * @throws RemoteException
+     */
+    public void updateFiles(String[] fileNames) throws RemoteException;
 
 }
