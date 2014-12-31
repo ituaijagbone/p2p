@@ -1,7 +1,6 @@
-package indexserverimpl;
+package backendimpl;
 
 import java.rmi.RemoteException;
-import java.util.ArrayList;
 
 /**
  * Created by ituaijagbone on 9/25/14.

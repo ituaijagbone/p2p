@@ -1,12 +1,6 @@
 package peerserviceimpl;
 
-import indexserverimpl.IndexApp;
-
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Scanner;
 
 /**
  * Created by ituaijagbone on 9/25/14.

@@ -24,7 +24,7 @@ public interface P2PServerService extends Remote {
      * Searches for filename among registered peers registered on the central server
      * @param fileName file name to search for
      * @param peerId the peer id of the peer requesting the file
-     * @return ArrayList containning all peerIds found or null if none
+     * @return ArrayList containing all peerIds found or null if none
      * @throws RemoteException
      */
     public ArrayList<String> search(String fileName, String peerId) throws RemoteException;

@@ -1,4 +1,4 @@
-package indexserverimpl;
+package backendimpl;
 
 import java.util.Arrays;
 
@@ -22,18 +22,34 @@ public class PeerObject {
         this.ipAddress = ipAddress;
     }
 
+    /**
+     * set port number
+     * @param portNumber port number of the peer
+     */
     public void setPortNumber(int portNumber) {
         this.portNumber = portNumber;
     }
 
+    /**
+     *
+     * @return port number
+     */
     public int getPortNumber() {
         return portNumber;
     }
 
+    /**
+     * Set file name
+     * @param fileNames file name
+     */
     public void setFileNames(String[] fileNames) {
         this.fileNames = fileNames;
     }
 
+    /**
+     *
+     * @return all file names under peer directory
+     */
     public String[] getFileNames() {
         return fileNames;
     }

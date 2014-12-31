@@ -1,4 +1,4 @@
-package indexserverimpl;
+package backendimpl;
 
 import p2pinterfaces.P2PServerService;
 
@@ -19,7 +19,7 @@ public class IndexServiceImpl implements P2PServerService  {
     @Override
     public synchronized String registry(String[] fileNames, int portNumber) throws RemoteException {
         String id = generatePeerId();
-        PeerObject peer = new PeerObject(fileNames, id, portNumber);
+        PeerObject peer = new PeerObject(fileNames, id, portNumber, "localhost");
         peers.put(id, peer);
         return peer.getPeerId();
     }
