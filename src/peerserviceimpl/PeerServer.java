@@ -1,5 +1,6 @@
 package peerserviceimpl;
 
+import backendimpl.PeerServiceImpl;
 import p2pinterfaces.P2PPeerService;
 
 import java.rmi.registry.LocateRegistry;

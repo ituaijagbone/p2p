@@ -6,7 +6,7 @@ import java.rmi.RemoteException;
 import java.util.ArrayList;
 
 /**
- * This is the RMI interface it has defined 4 interfaces that the peer client uses to
+ * This is an RMI interface. It has defined 4 interfaces that the peer client uses to
  * interface with the client.
  * Created by Mina and Itua on 9/22/14.
  */

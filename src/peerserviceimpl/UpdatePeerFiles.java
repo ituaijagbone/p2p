@@ -1,5 +1,7 @@
 package peerserviceimpl;
 
+import backendimpl.PeerServiceImpl;
+
 import java.util.Arrays;
 
 class UpdatePeerFiles implements Runnable {

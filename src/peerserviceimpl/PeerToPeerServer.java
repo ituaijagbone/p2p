@@ -7,13 +7,12 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
 
-class PeerToPeerServer {
-    //    private PeerServiceImpl peerService;
+public class PeerToPeerServer {
     private P2PPeerService peerService;
     String rmiName = "";
-    int serverPort = 1097;
-    String ipAddress = "localhost";
-    PeerToPeerServer(String peerId, String ipAddress, int serverPort) {
+    int serverPort = 1097; // Default server port
+    String ipAddress = "localhost"; // Default ip address
+    public PeerToPeerServer(String peerId, String ipAddress, int serverPort) {
         this.rmiName = peerId;
         this.serverPort = serverPort;
         this.ipAddress = ipAddress;
@@ -32,7 +31,7 @@ class PeerToPeerServer {
             peerService = (P2PPeerService)registry.lookup(rmiName);
         } catch (Exception e) {
 //            System.err.println(e.getMessage());
-            System.err.println("Neigbour: " + ipAddress+":"+serverPort + " not found");
+            System.err.println("Neighbor: " + ipAddress+":"+serverPort + " not found");
             e.printStackTrace();
         }
 
@@ -72,7 +71,7 @@ class PeerToPeerServer {
     }
 
     /**
-     * Update file names in peer's directory incase there is a change
+     * Update file names in peer's directory in case there is a change
      * @param fileNames file name
      */
     public void updateFiles(String[] fileNames) {
